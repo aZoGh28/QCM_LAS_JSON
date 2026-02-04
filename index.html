@@ -1,0 +1,332 @@
+﻿<!doctype html>
+<html lang="fr" data-accent="rosesalmon">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QCM LAS &mdash; Plateforme</title>
+  <meta name="description" content="Plateforme gratuite QCM LAS : import JSON, passage interactif, barème LAS, correction et note sur 20." />
+  <!-- Anti-cache v9 -->
+  <link rel="stylesheet" href="styles.css?v=9" />
+</head>
+
+<body>
+<div id="authGate" class="auth-gate hidden">
+  <div class="auth-gate-card">
+    <div id="gateLogin" class="gate-screen">
+      <h2>Se connecter</h2>
+      <p class="muted">Accede a QCM LAS avec ton compte.</p>
+      <div class="auth-row">
+        <label class="label">Email</label>
+        <input id="gateEmail" class="input" type="email" placeholder="email@exemple.com" />
+      </div>
+      <div class="auth-row">
+        <label class="label">Mot de passe</label>
+        <input id="gatePassword" class="input" type="password" placeholder="Mot de passe" />
+      </div>
+      <div class="row">
+        <button id="btnGateSignIn" class="btn btn-primary">Se connecter</button>
+        <button id="btnGateReset" class="btn btn-ghost">Mot de passe oublie</button>
+      </div>
+      <div class="gate-switch">
+        <span class="muted">Pas de compte ?</span>
+        <button id="btnShowSignUp" class="btn btn-ghost">Creer un compte</button>
+      </div>
+    </div>
+
+    <div id="gateSignup" class="gate-screen hidden">
+      <h2>Creer un compte</h2>
+      <p class="muted">Quelques infos pour personnaliser ton espace.</p>
+      <div class="auth-row">
+        <label class="label">Prenom</label>
+        <input id="gateFirstName" class="input" type="text" placeholder="Prenom" />
+      </div>
+      <div class="auth-row">
+        <label class="label">Nom</label>
+        <input id="gateLastName" class="input" type="text" placeholder="Nom" />
+      </div>
+      <div class="auth-row">
+        <label class="label">Date de naissance</label>
+        <input id="gateBirthdate" class="input" type="date" />
+      </div>
+      <div class="auth-row">
+        <label class="label">Email</label>
+        <input id="gateEmail2" class="input" type="email" placeholder="email@exemple.com" />
+      </div>
+      <div class="auth-row">
+        <label class="label">Mot de passe</label>
+        <input id="gatePassword2" class="input" type="password" placeholder="Mot de passe" />
+      </div>
+      <div class="row">
+        <button id="btnGateSignUp" class="btn btn-primary">Creer un compte</button>
+        <button id="btnShowLogin" class="btn btn-ghost">J'ai deja un compte</button>
+      </div>
+    </div>
+
+    <div id="gateStatus" class="msg"></div>
+  </div>
+</div>
+
+<div id="profileGate" class="auth-gate hidden">
+  <div class="auth-gate-card">
+    <h2>Completer ton profil</h2>
+    <p class="muted">C'est rapide et obligatoire pour acceder au site.</p>
+    <div class="auth-row">
+      <label class="label">Prenom</label>
+      <input id="profileFirstName" class="input" type="text" placeholder="Prenom" />
+    </div>
+    <div class="auth-row">
+      <label class="label">Nom</label>
+      <input id="profileLastName" class="input" type="text" placeholder="Nom" />
+    </div>
+    <div class="auth-row">
+      <label class="label">Date de naissance</label>
+      <input id="profileBirthdate" class="input" type="date" />
+    </div>
+    <div class="row">
+      <button id="btnSaveProfile" class="btn btn-primary">Enregistrer</button>
+    </div>
+    <div id="profileStatus" class="msg"></div>
+  </div>
+</div>
+<header class="topbar">
+  <div class="brand">
+    <button id="btnAccount" class="logo account-btn" title="Compte">👤</button>
+    <div>
+      <div class="title">QCM LAS</div>
+      <div class="subtitle">Examen interactif &bull; Bareme LAS &bull; Correction</div>
+    </div>
+  </div>
+
+  <div class="topbar-actions">
+    <div class="theme-menu">
+      <button id="btnAccent" class="btn btn-ghost">Theme</button>
+      <div id="accentMenu" class="accent-menu hidden">
+        <button class="accent-item" data-accent="rosesalmon">Rose saumon</button>
+        <button class="accent-item" data-accent="blue">Bleu</button>
+        <button class="accent-item" data-accent="green">Vert pale</button>
+        <button class="accent-item" data-accent="lilac">Lilas</button>
+        <button class="accent-item" data-accent="mint">Menthe</button>
+        <button class="accent-item" data-accent="amber">Ambre</button>
+        <button class="accent-item" data-accent="slate">Ardoise</button>
+        <button class="accent-item" data-accent="chocolate">Chocolat</button>
+        <button class="accent-item" data-accent="turquoise">Turquoise</button>
+        <button class="accent-item" data-accent="sand">Sable</button>
+      </div>
+    </div>
+    <button id="btnTheme" class="btn btn-ghost">
+      <span class="icon">Theme</span>
+    </button>
+    <button id="btnFullscreen" class="btn btn-ghost icon-btn" title="Plein ecran" aria-label="Plein ecran">
+      <span class="icon icon-svg" aria-hidden="true"></span>
+    </button>
+  </div>
+</header>
+
+<div id="accountMenu" class="account-menu hidden">
+  <div class="account-title">Compte</div>
+  <div id="authUser" class="muted">Non connecte</div>
+  <div class="row" style="margin-top:8px;">
+    <button id="btnStats" class="btn btn-secondary">Stats</button>
+    <button id="btnHistory" class="btn btn-secondary">Historique QCM</button>
+    <button id="btnSignOut" class="btn btn-ghost">Se deconnecter</button>
+  </div>
+</div>
+
+<main class="container">
+
+
+<!-- SETUP -->
+<section id="view-setup" class="card view">
+  <div class="card-header">
+    <h2>Charger un QCM</h2>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- JSON INPUT -->
+    <div class="panel">
+      <label class="label">Titre du QCM (optionnel)</label>
+      <input id="qcmTitleInput" class="input" type="text" placeholder="Ex: Cardiologie - S1" />
+
+      <label class="label">Coller le JSON</label>
+      <textarea id="jsonInput" class="textarea"
+        placeholder='...'></textarea>
+
+      <div class="row">
+        <button id="btnLoadJson" class="btn btn-primary">Charger le QCM</button>
+
+        <label class="btn btn-secondary file-btn">Importer .json
+          <input id="fileInput" type="file" accept="application/json" />
+        </label>
+
+        <button id="btnDemo" class="btn btn-ghost">Exemple</button>
+      </div>
+
+      <div class="notice">
+        <div class="notice-title">Comment creer ton QCM</div>
+        <ol class="notice-list">
+          <li>Ouvre une IA (ex: ChatGPT), importe ton PDF de cours.</li>
+          <li>Colle le prompt ci-contre dans l'IA.</li>
+          <li>Ajoute a la fin : "Genere X questions" (remplace X).</li>
+          <li>Copie le JSON genere et colle-le ici, ou importe le fichier .json.</li>
+        </ol>
+      </div>
+
+      <div id="setupMsg" class="msg"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel">
+      <h3>Paramètres</h3>
+
+      <!-- MODE -->
+      <div class="field">
+        <label class="label">Mode</label>
+        <div class="segmented">
+          <button class="seg active" data-mode="exam">Examen</button>
+          <button class="seg" data-mode="train">Entraînement</button>
+        </div>
+      </div>
+
+      <!-- TIMER -->
+      <div class="field">
+        <label class="label">Minuteur (mode Examen)</label>
+        <div class="toggle">
+          <input id="timerToggle" type="checkbox" checked />
+          <label for="timerToggle">
+            Activer le minuteur
+          </label>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <label class="label" style="margin:0;">Secondes / question</label>
+          <input id="timerPerQuestion" class="select" type="number" min="5" step="5" value="90" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>Prompt ChatGPT</h3>
+      <button id="btnCopyPrompt" class="btn btn-secondary">Copier le prompt</button>
+      <pre id="promptBox" class="pre"></pre>
+    </div>
+
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="view-quiz" class="card view hidden">
+
+  <div class="card-header">
+    <div>
+      <h2>Passage du QCM</h2>
+      <p class="muted" id="quizMeta"></p>
+    </div>
+    <div class="quiz-tools">
+      <div id="timerDisplay" class="badge">--:--</div>
+      <button id="btnFlag" class="btn btn-ghost">Marquer</button>
+      <button id="btnReview" class="btn btn-ghost">Liste</button>
+    </div>
+  </div>
+
+  <div class="progress">
+    <div class="progress-bar">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <div class="progress-text">
+      <span id="progressText"></span>
+    </div>
+  </div>
+
+  <!-- TRAINING GAUGES -->
+  <div id="questionCard" class="question"></div>
+  <div id="trainCorrection" class="train-correction hidden"></div>
+
+  <div class="row space-between">
+    <button id="btnPrev" class="btn btn-secondary">Precedente</button>
+    <div class="row">
+      <button id="btnValidate" class="btn btn-primary">Valider</button>
+      <button id="btnNext" class="btn btn-secondary">Suivante</button>
+      <button id="btnFinish" class="btn btn-ghost">Terminer</button>
+    </div>
+  </div>
+
+  <div id="quizMsg" class="msg"></div>
+</section>
+
+<!-- RESULTS -->
+<section id="view-results" class="card view hidden">
+  <div class="card-header">
+    <h2 id="resultsTitle">Résultats</h2>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Score moyen</div>
+      <div class="metric-value" id="metricMean">&mdash;</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Note /20</div>
+      <div class="metric-value" id="metric20">&mdash;</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Validées</div>
+      <div class="metric-value" id="metricDone">&mdash;</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Marquées</div>
+      <div class="metric-value" id="metricFlag">&mdash;</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Temps total</div>
+      <div class="metric-value" id="metricTimeTotal">&mdash;</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Temps / question</div>
+      <div class="metric-value" id="metricTimeAvg">&mdash;</div>
+    </div>
+  </div>
+
+  <div class="row space-between" style="padding: 12px 16px 0;">
+    <div class="row">
+      <button id="btnShowAll" class="btn btn-secondary">Tout</button>
+      <button id="btnShowWrong" class="btn btn-secondary">Erreurs</button>
+      <button id="btnShowFlag" class="btn btn-secondary">Marquées</button>
+    </div>
+    <button id="btnExportResults" class="btn btn-ghost">Exporter JSON</button>
+  </div>
+
+  <div id="resultsList" class="results"></div>
+
+  <div class="row">
+    <button id="btnRestartAll" class="btn btn-primary">Recommencer tout le QCM</button>
+    <button id="btnRestartWrong" class="btn btn-secondary">Recommencer les erreurs</button>
+    <button id="btnRestartFlagged" class="btn btn-secondary">Recommencer les marquées</button>
+    <button id="btnBackToSetup" class="btn btn-secondary">Nouveau QCM</button>
+  </div>
+</section>
+
+<!-- MODAL (cachée par défaut) -->
+<div id="modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div id="modalTitle" class="modal-title">Questions</div>
+      <button id="modalClose" class="btn btn-ghost">Fermer</button>
+    </div>
+    <div id="modalBody" class="modal-body"></div>
+  </div>
+</div>
+
+</main>
+
+
+
+<!-- Anti-cache v9 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="ui.js?v=9"></script>
+<script src="auth.js?v=9"></script>
+<script src="app.js?v=9"></script>
+</body>
+</html>
+
+
+
