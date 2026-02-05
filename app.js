@@ -839,6 +839,36 @@ function init() {
     openStats(30);
   });
 
+  const pdfInput = $("pdfInput");
+  if (pdfInput) pdfInput.addEventListener("change", async () => {
+    const file = pdfInput.files?.[0];
+    await uploadPdf(file);
+    pdfInput.value = "";
+  });
+  const btnCreateFolder = $("btnCreateFolder");
+  if (btnCreateFolder) btnCreateFolder.addEventListener("click", async () => {
+    const input = $("folderNameInput");
+    const name = (input?.value || "").trim();
+    if (!name) return setMsg($("pdfMsg"), "warn", "Nom du dossier manquant.");
+    await createFolder(name);
+    if (input) input.value = "";
+  });
+
+  const btnUsePdf = $("btnUsePdf");
+  const btnUseJson = $("btnUseJson");
+  const pdfBlock = $("pdfBlock");
+  const jsonBlock = $("jsonBlock");
+  const setMode = (mode) => {
+    const isPdf = mode === "pdf";
+    if (pdfBlock) pdfBlock.classList.toggle("hidden", !isPdf);
+    if (jsonBlock) jsonBlock.classList.toggle("hidden", isPdf);
+    if (btnUsePdf) btnUsePdf.className = isPdf ? "btn btn-primary" : "btn btn-ghost";
+    if (btnUseJson) btnUseJson.className = isPdf ? "btn btn-ghost" : "btn btn-primary";
+  };
+  if (btnUsePdf) btnUsePdf.addEventListener("click", () => setMode("pdf"));
+  if (btnUseJson) btnUseJson.addEventListener("click", () => setMode("json"));
+  setMode("json");
+
   // gate buttons
   $("btnGateSignUp").addEventListener("click", async () => {
     const first = $("gateFirstName").value.trim();

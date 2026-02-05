@@ -93,7 +93,7 @@
     <button id="btnAccount" class="logo account-btn" title="Compte">👤</button>
     <div>
       <div class="title">QCM LAS</div>
-      <div class="subtitle">Examen interactif &bull; Bareme LAS &bull; Correction</div>
+      <div class="subtitle"></div>
     </div>
   </div>
 
@@ -143,33 +143,59 @@
 
   <div class="grid-2">
 
-    <!-- JSON INPUT -->
+    <!-- JSON / PDF INPUT -->
     <div class="panel">
-      <label class="label">Titre du QCM (optionnel)</label>
-      <input id="qcmTitleInput" class="input" type="text" placeholder="Ex: Cardiologie - S1" />
-
-      <label class="label">Coller le JSON</label>
-      <textarea id="jsonInput" class="textarea"
-        placeholder='...'></textarea>
-
-      <div class="row">
-        <button id="btnLoadJson" class="btn btn-primary">Charger le QCM</button>
-
-        <label class="btn btn-secondary file-btn">Importer .json
-          <input id="fileInput" type="file" accept="application/json" />
-        </label>
-
-        <button id="btnDemo" class="btn btn-ghost">Exemple</button>
+      <div class="row" style="margin-bottom:10px;">
+        <button id="btnUsePdf" class="btn btn-ghost">PDF</button>
+        <button id="btnUseJson" class="btn btn-primary">JSON</button>
       </div>
 
-      <div class="notice">
-        <div class="notice-title">Comment creer ton QCM</div>
-        <ol class="notice-list">
-          <li>Ouvre une IA (ex: ChatGPT), importe ton PDF de cours.</li>
-          <li>Colle le prompt ci-contre dans l'IA.</li>
-          <li>Ajoute a la fin : "Genere X questions" (remplace X).</li>
-          <li>Copie le JSON genere et colle-le ici, ou importe le fichier .json.</li>
-        </ol>
+      <div id="pdfBlock" class="hidden">
+        <div class="notice">
+          <div class="notice-title">Mes PDFs</div>
+          <div class="row" style="margin-top:8px;">
+            <label class="btn btn-secondary file-btn">Importer PDF
+              <input id="pdfInput" type="file" accept="application/pdf" />
+            </label>
+            <input id="folderNameInput" class="input" type="text" placeholder="Nouveau dossier" />
+            <button id="btnCreateFolder" class="btn btn-secondary">Creer dossier</button>
+          </div>
+          <div id="pdfMsg" class="msg"></div>
+          <div class="drive-table">
+            <div class="drive-header">
+              <div class="drive-col name">Nom</div>
+              <div class="drive-col owner">Proprietaire</div>
+              <div class="drive-col modified">Date de modification</div>
+              <div class="drive-col actions">Actions</div>
+            </div>
+            <div id="pdfList" class="drive-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="jsonBlock">
+        <label class="label">Titre du QCM (optionnel)</label>
+        <input id="qcmTitleInput" class="input" type="text" placeholder="Ex: Cardiologie - S1" />
+
+        <label class="label">Coller le JSON</label>
+        <textarea id="jsonInput" class="textarea"
+          placeholder='...'></textarea>
+
+        <div class="row">
+          <button id="btnLoadJson" class="btn btn-primary">Charger le QCM</button>
+
+          <button id="btnDemo" class="btn btn-ghost">Exemple</button>
+        </div>
+
+        <div class="notice">
+          <div class="notice-title">Comment créer ton QCM</div>
+          <ol class="notice-list">
+            <li>Choisis le nombre de questions que tu souhaites.</li>
+            <li>Ouvre ChatGPT ou Gemini et ajoute ton PDF de cours.</li>
+            <li>Copie le “Prompt ChatGPT” juste à droite, puis colle-le dans l’IA.</li>
+            <li>Récupère le JSON fourni et colle-le juste au dessus (il s'agit du code entier).</li>
+          </ol>
+        </div>
       </div>
 
       <div id="setupMsg" class="msg"></div>
@@ -206,7 +232,13 @@
       <div class="divider"></div>
 
       <h3>Prompt ChatGPT</h3>
-      <button id="btnCopyPrompt" class="btn btn-secondary">Copier le prompt</button>
+      <div class="row">
+        <button id="btnCopyPrompt" class="btn btn-secondary">Copier le prompt</button>
+        <div class="row">
+          <label class="label" style="margin:0;">Questions</label>
+          <input id="promptQuestionCount" class="select" type="number" min="1" max="40" step="1" value="30" />
+        </div>
+      </div>
       <pre id="promptBox" class="pre"></pre>
     </div>
 
