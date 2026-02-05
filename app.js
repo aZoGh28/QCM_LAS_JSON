@@ -35,6 +35,7 @@ Contraintes OBLIGATOIRES :
 - Reponse en JSON STRICT (aucun texte hors JSON)
 - 80% questions type "multi" et 20% type "tf"
 - Toujours 5 propositions/items A->E
+- Les questions "multi" peuvent parfois avoir 1 seule bonne reponse (rarement).
 
 Format JSON attendu :
 {
@@ -63,9 +64,20 @@ Regles :
 - options/items doivent commencer exactement par "A ", "B ", "C ", "D ", "E "
 - answer_indices contient des indices 0..4
 - truth contient 5 booleens
-- explanation est en francais et ne doit pas ajouter d'informations hors cours
+- explanation est en francais, ne doit pas ajouter d'informations hors cours, et se termine par un resume des bonnes reponses par lettres (ex: "Reponses: ABC")
 - evidence est optionnel mais recommande (1 a 3 extraits)
 `;
+
+function clampPromptCount(count) {
+  if (!Number.isFinite(count)) return 30;
+  const n = Math.floor(count);
+  return Math.min(40, Math.max(1, n));
+}
+
+function buildPromptText(count) {
+  const n = clampPromptCount(count);
+  return `${PROMPT_TEXT}\nGenere ${n} questions.`;
+}
 
 function formatTime(sec) {
   const s = Math.max(0, Math.floor(sec || 0));
@@ -179,7 +191,10 @@ function goStep(step) {
   } else {
     stopTimer();
   }
-  if (step === "results") renderResults();
+  if (step === "results") {
+    if (state.mode === "exam") validateAllQuestions();
+    renderResults();
+  }
 }
 
 function validateQuestion(q, idx) {
@@ -310,7 +325,13 @@ function scoreTF(q, userTruth) {
 }
 
 function renderSetup() {
-  $("promptBox").textContent = PROMPT_TEXT;
+  const promptCount = $("promptQuestionCount");
+  if (promptCount) {
+    const v = parseInt(promptCount.value, 10);
+    promptCount.value = String(clampPromptCount(v));
+  }
+  const count = parseInt($("promptQuestionCount")?.value || "30", 10);
+  $("promptBox").textContent = buildPromptText(count);
 
   // segmented mode
   document.querySelectorAll(".seg").forEach(btn => {
@@ -339,7 +360,7 @@ function renderProgress() {
   const pct = Math.round(((idx+1) / n) * 100);
 
   $("progressFill").style.width = pct + "%";
-  $("progressText").textContent = `Question ${idx+1}/${n} - Validees: ${doneCount}/${n}`;
+  $("progressText").textContent = `Question ${idx+1}/${n}`;
 }
 
 function renderQuiz() {
@@ -376,7 +397,7 @@ function renderQuiz() {
 
   const meta = document.createElement("div");
   meta.className = "q-meta";
-  meta.textContent = q.type === "multi" ? "QCM multi-reponses (A->E)" : "Vrai/Faux par items (A->E)";
+  meta.textContent = q.type === "multi" ? "QCM" : "Vrai/Faux par items (A->E)";
   card.appendChild(meta);
 
   // previous saved answer
@@ -472,6 +493,11 @@ function renderQuiz() {
     nextBtn.disabled = atEnd;
     nextBtn.classList.toggle("hidden", atEnd);
   }
+
+  const validateBtn = $("btnValidate");
+  if (validateBtn) {
+    validateBtn.classList.toggle("hidden", state.mode === "exam");
+  }
 }
 
 function getCurrentAnswerPayload() {
@@ -523,6 +549,24 @@ function validateCurrent() {
     setMsg(quizMsg, t, `Valide - erreurs=${result.errors} - score=${result.score}`);
   } else {
     setMsg(quizMsg, "ok", "Reponse enregistree. (Correction complete a la fin - mode Examen)");
+  }
+}
+
+function validateAllQuestions() {
+  if (!state.questions.length) return;
+  for (let i = 0; i < state.questions.length; i++) {
+    if (state.validated[i]) continue;
+    const q = state.questions[i];
+    const a = state.answers[i]?.payload;
+    let result;
+    if (q.type === "multi") {
+      const set = new Set(a?.indices || []);
+      result = scoreMulti(q, set);
+    } else {
+      const truth = a?.truth || [null, null, null, null, null];
+      result = scoreTF(q, truth);
+    }
+    state.validated[i] = result;
   }
 }
 
@@ -765,7 +809,8 @@ function init() {
   setAccent(state.accent || "rosesalmon");
 
   // set prompt
-  $("promptBox").textContent = PROMPT_TEXT;
+  const initCount = parseInt($("promptQuestionCount")?.value || "30", 10);
+  $("promptBox").textContent = buildPromptText(initCount);
 
   // restore UI
   renderSetup();
@@ -905,8 +950,16 @@ function init() {
 
   // copy prompt
   $("btnCopyPrompt").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(PROMPT_TEXT);
+    const count = parseInt($("promptQuestionCount")?.value || "30", 10);
+    await navigator.clipboard.writeText(buildPromptText(count));
     setMsg($("setupMsg"), "ok", "Prompt copie. Colle-le dans ChatGPT.");
+  });
+
+  $("promptQuestionCount").addEventListener("input", (e) => {
+    const v = parseInt(e.target.value, 10);
+    const next = clampPromptCount(v);
+    e.target.value = String(next);
+    $("promptBox").textContent = buildPromptText(next);
   });
 
   // load JSON from textarea
@@ -920,16 +973,6 @@ function init() {
     $("jsonInput").value = JSON.stringify(DEMO, null, 2);
     if ($("qcmTitleInput")) $("qcmTitleInput").value = "Exemple QCM";
     const ok = loadQuestionsFromJsonText($("jsonInput").value);
-    if (ok) goStep("quiz");
-  });
-
-  // import file
-  $("fileInput").addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    $("jsonInput").value = text;
-    const ok = loadQuestionsFromJsonText(text);
     if (ok) goStep("quiz");
   });
 
@@ -949,6 +992,7 @@ function init() {
   $("btnFinish").addEventListener("click", () => {
     state.finished = true;
     state.quizEndedAt = Date.now();
+    if (state.mode === "exam") validateAllQuestions();
     saveRunIfAuthed();
     goStep("results");
   });
