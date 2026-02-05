@@ -3,7 +3,7 @@ const SUPABASE_URL = "https://tftqrxpgcqkcehzqheqj.supabase.co";
 const SUPABASE_ANON = "sb_publishable_aV4d75MGFdQCk-jHtpTFUQ_k1MrDOtS";
 const SUPABASE_STORAGE_KEY = "qcm_las_auth";
 const QUIZ_RUNS_TABLE = "quiz_runs";
-const QCM_API_BASE = window.QCM_API_BASE || "http://127.0.0.1:8787";
+const QCM_FUNCTION_URL = window.QCM_FUNCTION_URL || `${SUPABASE_URL}/functions/v1/pdf-to-qcm`;
 const PDF_INDEX_TABLE = "pdf_index";
 const PDF_FOLDERS_TABLE = "pdf_folders";
 
@@ -42,6 +42,13 @@ function saveUserPrefs(prefs) {
   }, 400);
 }
 
+function fmtBytes(bytes) {
+  if (!Number.isFinite(bytes)) return "-";
+  const sizes = ["B","KB","MB","GB"];
+  const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + " " + sizes[i];
+}
+
 function openPdfInModal(url, name) {
   const wrap = document.createElement("div");
   wrap.className = "pdf-viewer";
@@ -61,6 +68,7 @@ function titleFromFilename(name) {
 
 function setCurrentFolder(id) {
   currentFolderId = id || null;
+  renderFolderList();
   listUserPdfs();
 }
 
@@ -78,6 +86,11 @@ async function loadFolders() {
     return;
   }
   pdfFolders = data || [];
+  renderFolderList();
+}
+
+function renderFolderList() {
+  // no sidebar anymore
 }
 
 function enableFolderDrop(el) {
@@ -117,7 +130,6 @@ async function renameFolder(id, name) {
   if (!state.user || !id || !name) return;
   await supabaseClient.from(PDF_FOLDERS_TABLE).update({ name }).eq("id", id).eq("user_id", state.user.id);
   await loadFolders();
-  await listUserPdfs();
 }
 
 async function deleteFolder(id) {
@@ -147,15 +159,24 @@ async function createQcmFromPdf(fileName) {
     .createSignedUrl(`${state.user.id}/${fileName}`, 180);
   if (urlErr) return setMsg(status, "err", "Lien temporaire impossible.");
 
+  const { data: refreshed, error: refreshErr } = await supabaseClient.auth.refreshSession();
+  const accessToken = refreshed.session?.access_token;
+  if (refreshErr) console.error("refreshSession error:", refreshErr);
+  if (!accessToken) return setMsg(status, "err", "Session invalide. Reconnecte-toi.");
+
   let openaiFileId = await getOpenAiFileId(fileName);
   const titleHint = titleFromFilename(fileName);
   try {
-    const res = await fetch(`${QCM_API_BASE}/api/pdf-to-qcm`, {
+    const res = await fetch(QCM_FUNCTION_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+        "apikey": SUPABASE_ANON
+      },
       body: JSON.stringify({ pdfUrl: urlData.signedUrl, titleHint, openai_file_id: openaiFileId, fileName })
     });
-    const payload = await res.json();
+    const payload = await res.json().catch(() => ({}));
     if (!res.ok || !payload?.data) {
       const msg = payload?.error || "Generation impossible.";
       return setMsg(status, "err", msg);
@@ -222,7 +243,12 @@ async function listUserPdfs() {
     .list(state.user.id, { limit: 100, sortBy: { column: "created_at", order: "desc" } });
   if (token !== pdfRenderToken) return;
 
-  if (error || !data) {
+  if (error) {
+    setMsg($("pdfMsg"), "err", "Impossible de lister les fichiers.");
+    return;
+  }
+
+  if (!data) {
     setMsg($("pdfMsg"), "err", "Impossible de lister les fichiers.");
     return;
   }
@@ -234,6 +260,7 @@ async function listUserPdfs() {
     return folderId === currentFolderId;
   });
 
+  // Back row when inside a folder
   if (currentFolderId) {
     const back = document.createElement("div");
     back.className = "drive-row";
@@ -247,6 +274,7 @@ async function listUserPdfs() {
     list.appendChild(back);
   }
 
+  // Folders (visible at root)
   if (!currentFolderId) {
     pdfFolders.forEach(f => {
       const row = document.createElement("div");
@@ -362,7 +390,16 @@ async function listUserPdfs() {
       if (delErr) return setMsg($("pdfMsg"), "err", "Suppression impossible.");
       if (openaiId) {
         try {
-          await fetch(`${QCM_API_BASE}/api/openai-file/${openaiId}`, { method: "DELETE" });
+          const { data: refreshed } = await supabaseClient.auth.refreshSession();
+          const accessToken = refreshed.session?.access_token;
+          if (!accessToken) return;
+          await fetch(`${QCM_FUNCTION_URL}?file_id=${encodeURIComponent(openaiId)}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "apikey": SUPABASE_ANON
+            }
+          });
         } catch {}
       }
       await supabaseClient
@@ -482,10 +519,12 @@ function renderAuth(user) {
     if (meta.pref_theme && meta.pref_theme !== state.theme) {
       state.theme = meta.pref_theme;
       setTheme(meta.pref_theme);
+      try { localStorage.setItem("qcm_pref_theme", meta.pref_theme); } catch {}
     }
     if (meta.pref_accent && meta.pref_accent !== state.accent) {
       state.accent = meta.pref_accent;
       setAccent(meta.pref_accent);
+      try { localStorage.setItem("qcm_pref_accent", meta.pref_accent); } catch {}
     }
   }
 
@@ -546,7 +585,6 @@ async function insertQuizRun(payload) {
     console.info("Quiz run saved.");
   }
 }
-
 
 async function openHistory() {
   const wrap = document.createElement("div");
@@ -763,7 +801,6 @@ function buildStatsView(rows, days) {
     controls.appendChild(btn);
   });
   wrap.appendChild(controls);
-
 
   const end = new Date();
   const start = new Date();

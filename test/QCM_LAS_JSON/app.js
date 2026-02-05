@@ -192,7 +192,7 @@ function goStep(step) {
     stopTimer();
   }
   if (step === "results") {
-    validateAllQuestions();
+    if (state.mode === "exam") validateAllQuestions();
     renderResults();
   }
 }
@@ -497,7 +497,6 @@ function renderQuiz() {
   const validateBtn = $("btnValidate");
   if (validateBtn) {
     validateBtn.classList.toggle("hidden", state.mode === "exam");
-    validateBtn.textContent = state.mode === "train" ? "Corriger" : "Valider";
   }
 }
 
@@ -986,15 +985,12 @@ function init() {
     setMsg($("setupMsg"), "ok", "Prompt copie. Colle-le dans ChatGPT.");
   });
 
-  const promptCountEl = $("promptQuestionCount");
-  if (promptCountEl) {
-    promptCountEl.addEventListener("input", (e) => {
-      const v = parseInt(e.target.value, 10);
-      const next = clampPromptCount(v);
-      e.target.value = String(next);
-      $("promptBox").textContent = buildPromptText(next);
-    });
-  }
+  $("promptQuestionCount").addEventListener("input", (e) => {
+    const v = parseInt(e.target.value, 10);
+    const next = clampPromptCount(v);
+    e.target.value = String(next);
+    $("promptBox").textContent = buildPromptText(next);
+  });
 
   // load JSON from textarea
   $("btnLoadJson").addEventListener("click", () => {
@@ -1026,7 +1022,7 @@ function init() {
   $("btnFinish").addEventListener("click", () => {
     state.finished = true;
     state.quizEndedAt = Date.now();
-    validateAllQuestions();
+    if (state.mode === "exam") validateAllQuestions();
     saveRunIfAuthed();
     goStep("results");
   });
